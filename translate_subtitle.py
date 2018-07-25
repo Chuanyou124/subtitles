@@ -1,6 +1,5 @@
 from tkinter import *
 import tkinter as tk
-from mss import mss
 import pyautogui
 import numpy as np
 from pyscreenshot import grab
@@ -21,20 +20,16 @@ def bwfy(img, th=200, lonly=False):
     # Now we put it back in Pillow/PIL land
     return Image.fromarray(bw)
 
-def stop_ss():
-    root.after_cancel(ss_id)
-
 def ss():
-    root.after(500, ss)
-    global x1, y1, x2, y2
-    if x2 - x1 >= 10 and y2 - y1 >= 10:
-        im = bwfy(grab(bbox=(x1, y1, x2-x1, y2-y1)), th=200)
-        text = pytesseract.image_to_string(im, lang=L_img[tkvar.get()], config='--psm 7')
-        print(text)
-        stext = fanyi.translate(text, src=L_trans[tkvar.get()], dest=L_trans[tkvarTo.get()]).text
-        print(stext)
-        lbl_text.set(' '.join(stext.split()))
-        entry.update_idletasks()
+    global ss_id
+    im = bwfy(grab(bbox=(x1, y1, x2-x1, y2-y1)), th=200)
+    text = pytesseract.image_to_string(im, lang=L_img[tkvar.get()], config='--psm 7')
+    print(text)
+    stext = fanyi.translate(text, src=L_trans[tkvar.get()], dest=L_trans[tkvarTo.get()]).text
+    print(stext)
+    lbl_text.set(' '.join(stext.split()))
+    entry.update_idletasks()
+    ss_id = root.after(period, ss)
 
 def ul_pos(event):
     global x1, y1
@@ -50,15 +45,14 @@ def br_pos(event):
     print('x2', 'y2', x2, y2)
 
 def jieping():
-    global app, ss_id, btn_text, x1, x2
+    global app, ss_id, btn_text
     btn_txt = btn_text.get()
     print('ss id', ss_id)
     if btn_txt == 'Select Screen':
         app.maximize()
         btn_text.set('Stop')
     else:
-        x2 = x1
-        #root.after_cancel(ss_id)
+        root.after_cancel(ss_id)
         btn_text.set('Select Screen')
     print('ss id', ss_id)
 
@@ -137,13 +131,15 @@ class DrawRectangle(Frame):
         y2 = root.winfo_pointery()
         print('x2', 'y2', x2, y2)
         global ss_id
-        self.recover_size()
-        ss_id = root.after(500, ss)
+        if x2 - x1 > 100 and y2 - y1 > 10:
+            self.recover_size()
+            ss_id = root.after(period, ss)
 
 x1, y1, x2, y2 = 0,0,0,0
 ss_id = None
+period = 100
 fanyi = Translator()
-L_img = {'Chinese':'chi_sim','English':'eng','Japanese':'jpa','Korean':'kor'}
+L_img = {'Chinese':'chi_sim','English':'eng','Japanese':'jpn','Korean':'kor'}
 L_trans = {'Chinese':'zh-CN','English':'en','Japanese':'ja','Korean':'ko'}
 
 root = tk.Tk()# root.bind('<Button 1>', ul_pos); root.bind('<ButtonRelease-1>', br_pos)
@@ -159,6 +155,22 @@ btn_text = tk.StringVar()
 btn_text.set('Select Screen')
 button1 = tk.Button(root, textvariable=btn_text, width=15, height=2, command=jieping)
 button1.grid(row=1, column=1)
+
+def action(*args):
+    global ss_id, tkvarA
+    if tkvarA.get() == 'Start':
+        ss_id = root.after(period, ss)
+    else:
+        root.after_cancel(ss_id)
+
+'''
+tkvarA = StringVar(root)
+choicesA = { 'Start','Stop'}
+tkvarA.set('Stop') # set the default option
+act = OptionMenu(root, tkvarA, *choicesA)
+act.grid(row=2, column=1)
+tkvarA.trace('w', action)
+'''
 
 # Create a Tkinter variable
 tkvar = StringVar(root);tkvarTo = StringVar(root)
